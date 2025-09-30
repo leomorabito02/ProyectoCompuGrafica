@@ -1,23 +1,45 @@
-# crea el VBO, IBO y VAO con el shaderprogram  y el format
-# implementa el metodo render para renderizar el vao
-
 class Graphics:
-    def __init__(self, ctx, shader_program, vertices, indices):
-        self.ctx = ctx
-        self.shader_program = shader_program
+    def __init__(self, ctx, model, material):
+        self.__ctx = ctx
+        self.__model = model
+        self.__material = material
 
-        #VBO IBO Y VAO
-        #VBO --> vertex buffer object: almacena los datos de los vertices
-        self.vbo = ctx.buffer(vertices.tobytes())
-        # IBO --> index buffer object: almacena los indices para dibujar los vertices
-        self.ibo = ctx.buffer(indices.tobytes())
-        # VAO --> vertex array object: combina el vbo e ibo y define el formato de los datos
-        self.vao = ctx.vertex_array(shader_program.prog, [(
-            self.vbo, '3f 3f', 'in_pos', 'in_color')
-        ], self.ibo)
+        self.__vbo = self.create_buffers()
+        self.__ibo = ctx.buffer(model.indices.tobytes())
+        self.__vao = ctx.vertex_array(material.shader_program.prog, [*self.__vbo], self.__ibo)
 
-    def set_shader(self, shader_program):
-        self.shader_program = shader_program.prog
+        self.vao = ctx.vertex_array(material.shader_program.prog, [*self.vbo], self.ibo)
+        self.textures = self.load_textures(material.textures_data)
 
-    def set_uniform(self, name, value):
-        self.shader_program.set_uniform(name, value)
+    def create_buffers(self):
+        buffers = []
+        shader_attributes = self.__material.shader_program.attributes
+
+        for attribute in self.__model.vertex_layout.get_attributes():
+            if attribute.name in shader_attributes:
+                vbo = self.__ctx.buffer(attribute.array.tobytes())
+                buffers.append((vbo, attribute.format, attribute.name))
+        return buffers
+
+    def load_textures(self, textures_data):
+        textures = []
+        for texture in textures_data:
+            if texture.image_data:
+                texture_ctx = self.__ctx.texture(texture.size, texture.channels_amount, texture.image_data)
+                if texture.build_mipmaps:
+                    texture_ctx.build_mipmaps()
+                texture_ctx.repeat_x = texture.repeat_x
+                texture_ctx.repeat_y = texture.repeat_y
+                textures.append((texture.name, texture_ctx))
+        return textures
+
+    def render(self, uniforms):
+        for name, value in uniforms.items():
+            if name in self.__material.shader_program.prog:
+                self.__material.set_uniform(name, value)
+
+        for i, (name, texture_ctx) in enumerate(self.__textures):
+            texture_ctx.use(i)
+            self.__material.shader_program.set_uniform(name, i)
+
+        self.__vao.render()
