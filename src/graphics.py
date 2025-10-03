@@ -8,8 +8,8 @@ class Graphics:
         self.__ibo = ctx.buffer(model.indices.tobytes())
         self.__vao = ctx.vertex_array(material.shader_program.prog, [*self.__vbo], self.__ibo)
 
-        self.vao = ctx.vertex_array(material.shader_program.prog, [*self.vbo], self.ibo)
-        self.textures = self.load_textures(material.textures_data)
+        # Cargar texturas con la nueva forma (diccionario)
+        self.__textures = self.load_textures(material.textures_data)
 
     def create_buffers(self):
         buffers = []
@@ -21,25 +21,44 @@ class Graphics:
                 buffers.append((vbo, attribute.format, attribute.name))
         return buffers
 
+    # --- Nuevo load_textures con diccionario ---
     def load_textures(self, textures_data):
-        textures = []
+        textures = {}  # ahora usamos un dict
         for texture in textures_data:
             if texture.image_data:
-                texture_ctx = self.__ctx.texture(texture.size, texture.channels_amount, texture.image_data)
+                texture_ctx = self.__ctx.texture(
+                    texture.size,
+                    texture.channels_amount,
+                    texture.get_bytes()   # antes era texture.image_data
+                )
                 if texture.build_mipmaps:
                     texture_ctx.build_mipmaps()
                 texture_ctx.repeat_x = texture.repeat_x
                 texture_ctx.repeat_y = texture.repeat_y
-                textures.append((texture.name, texture_ctx))
+                textures[texture.name] = (texture, texture_ctx)
         return textures
 
+    # --- Render usando el diccionario ---
     def render(self, uniforms):
         for name, value in uniforms.items():
             if name in self.__material.shader_program.prog:
                 self.__material.set_uniform(name, value)
 
-        for i, (name, texture_ctx) in enumerate(self.__textures):
-            texture_ctx.use(i)
+        for i, (name, (tex, tex_ctx)) in enumerate(self.__textures.items()):
+            tex_ctx.use(i)
             self.__material.shader_program.set_uniform(name, i)
 
         self.__vao.render()
+
+    # --- Nuevo método update_texture ---
+    def update_texture(self, texture_name, new_data):
+        if texture_name not in self.__textures:
+            raise ValueError(f"No existe la textura {texture_name}")
+
+        texture_obj, texture_ctx = self.__textures[texture_name]
+
+        # Actualizar datos en CPU
+        texture_obj.update_data(new_data)
+
+        # Escribir en GPU
+        texture_ctx.write(texture_obj.get_bytes())

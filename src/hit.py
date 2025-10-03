@@ -2,21 +2,19 @@ import glm
 import math
 
 class Hit:
-    def __init__(self, get_model_matrix):
-
+    def __init__(self, get_model_matrix, hittable: bool = True):
         self.__get_model_matrix = get_model_matrix
+        self.hittable = hittable  # nuevo flag
 
     @property
     def model_matrix(self) -> glm.mat4:
         return self.__get_model_matrix()
 
-  
     @property
     def position(self) -> glm.vec3:
         m = self.model_matrix
         return glm.vec3(m[3].x, m[3].y, m[3].z)
 
-   
     @property
     def scale(self) -> glm.vec3:
         m = self.model_matrix
@@ -30,29 +28,31 @@ class Hit:
         raise NotImplementedError("Subclasses should implement this method.")
 
 
-
 class HitBoxOBB(Hit):
-    def __init__(self, get_model_matrix):
-        super().__init__(get_model_matrix)
+    def __init__(self, get_model_matrix, hittable: bool = True):
+        super().__init__(get_model_matrix, hittable)
 
     def check_hit(self, origin, direction) -> bool:
+        # Si no es hiteable, cortar
+        if not self.hittable:
+            return False
+
         # Normalizar datos de entrada
         origin = glm.vec3(origin)
         direction = glm.normalize(glm.vec3(direction))
 
-    
+        # Transformar a espacio local del OBB
         inv_model = glm.inverse(self.model_matrix)
-        local_origin4 = inv_model * glm.vec4(origin, 1.0) 
-        local_dir4    = inv_model * glm.vec4(direction, 0.0)  
+        local_origin4 = inv_model * glm.vec4(origin, 1.0)
+        local_dir4    = inv_model * glm.vec4(direction, 0.0)
 
         local_origin = glm.vec3(local_origin4)
         local_dir    = glm.normalize(glm.vec3(local_dir4))
 
-
+        # AABB unitario en espacio local
         min_bounds = glm.vec3(-1.0, -1.0, -1.0)
         max_bounds = glm.vec3( 1.0,  1.0,  1.0)
 
-        
         tmin = -math.inf
         tmax =  math.inf
         eps = 1e-8
@@ -93,21 +93,23 @@ class HitBoxOBB(Hit):
             tmax = min(tmax, tz2)
             if tmin > tmax: return False
 
-
         return tmax >= 0.0
 
-class HitBox(Hit):
 
-    def __init__(self, get_model_matrix):
-        super().__init__(get_model_matrix)
+class HitBox(Hit):
+    def __init__(self, get_model_matrix, hittable: bool = True):
+        super().__init__(get_model_matrix, hittable)
 
     def check_hit(self, origin, direction) -> bool:
+        # Si no es hiteable, cortar
+        if not self.hittable:
+            return False
+
         origin = glm.vec3(origin)
         direction = glm.normalize(glm.vec3(direction))
 
         min_bounds = self.position - self.scale
         max_bounds = self.position + self.scale
-
 
         tmin = (min_bounds - origin) / direction
         tmax = (max_bounds - origin) / direction

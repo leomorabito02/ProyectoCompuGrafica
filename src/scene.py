@@ -5,6 +5,8 @@
 from graphics import Graphics
 import glm
 import math
+from raytracer import RayTracer
+
 
 class Scene:
     def __init__(self, ctx, camera):
@@ -16,10 +18,15 @@ class Scene:
         self.view = camera.get_view_matrix()
         self.projection = camera.get_perspective_matrix()
         self.time = 0  # en el constructor definir self.time = 0
+    
+    def start(self):
+        print("Startt!!!!!")
 
-    def add_object(self, obj, shader_program=None):
-        self.objects.append(obj)
-        self.graphics[obj.name] = Graphics(self.ctx, shader_program, obj.vertices, obj.indices)
+    # --- NUEVA FIRMA: recibimos model (objeto) y material ---
+    def add_object(self, model, material):
+        self.objects.append(model)
+        # Graphics ahora se crea con (ctx, model, material)
+        self.graphics[model.name] = Graphics(self.ctx, model, material)
 
     def render(self):
         self.time += 0.01  # avanzar el tiempo
@@ -29,22 +36,19 @@ class Scene:
         self.projection = self.camera.get_perspective_matrix()
 
         for obj in self.objects:
-            # --- Código de la imagen: rotar en X, Y, Z ---
-            obj.rotation.x += 0.8   # rotar en X
-            obj.rotation.y += 0.6   # rotar en Y
-            obj.rotation.z += 0.4   # rotar en Z
+            # No animar el Quad de fondo (sprite)
+            if obj.name != "Sprite":
+                # Rotaciones por frame (X, Y, Z)
+                obj.rotation += glm.vec3(0.8, 0.6, 0.4)
+                # Pequeño desplazamiento en X con el tiempo
+                obj.position.x = math.sin(self.time) * 0.01
 
-            # Pequeño desplazamiento en X con el tiempo
-            obj.position.x += math.sin(self.time) * 0.01
-
-            # Calcular matrices y pasar uniformes
+            # Calcular matrices y enviar uniformes
             model = obj.get_model_matrix()
             mvp = self.projection * self.view * model
 
-            sp = self.graphics[obj.name].shader_program
-            sp.set_uniform("Mvp", mvp)
-
-            self.graphics[obj.name].vao.render()
+            # Ahora delegamos el render al Graphics del objeto
+            self.graphics[obj.name].render({'Mvp': mvp})
 
     def on_mouse_click(self, u, v):
         """u, v en [0,1] desde Window.on_mouse_press"""
@@ -68,3 +72,21 @@ class Scene:
         # Actualizar parámetros de cámara y su matriz de proyección
         self.camera.aspect = width / max(1, height)
         self.projection = self.camera.get_perspective_matrix()
+
+class RayScene(Scene):
+    def __init__(self, ctx, camera, width, height):
+        super().__init__(ctx, camera)
+        self.raytracer= RayTracer(camera, width, height)
+    
+    def start(self):
+        self.raytracer.render_frame(self.objects)
+        if "Sprite" in self.graphics:
+            self.graphics["Sprite"].update_texture("u_texture", self.raytracer.get_texture())
+        
+    def render(self):
+        super().render()
+
+    def on_resize(self, width, height):
+        super().on_resize(width, height)
+        self.raytracer= RayTracer(self.camera, width, height)
+        self.start()
