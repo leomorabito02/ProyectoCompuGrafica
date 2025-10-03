@@ -1,9 +1,6 @@
 import glm
 import math
 
-# ---------------------------------------------
-# Base: obtiene SIEMPRE la model matrix actual
-# ---------------------------------------------
 class Hit:
     def __init__(self, get_model_matrix):
 
@@ -13,13 +10,13 @@ class Hit:
     def model_matrix(self) -> glm.mat4:
         return self.__get_model_matrix()
 
-    # Posición = última columna de la model matrix (traslación)
+  
     @property
     def position(self) -> glm.vec3:
         m = self.model_matrix
         return glm.vec3(m[3].x, m[3].y, m[3].z)
 
-    # Escala = norma de los ejes base (columnas 0,1,2)
+   
     @property
     def scale(self) -> glm.vec3:
         m = self.model_matrix
@@ -33,9 +30,7 @@ class Hit:
         raise NotImplementedError("Subclasses should implement this method.")
 
 
-# ---------------------------------------------------------
-# OBB: bounding box orientada (rota/escala con el objeto)
-# ---------------------------------------------------------
+
 class HitBoxOBB(Hit):
     def __init__(self, get_model_matrix):
         super().__init__(get_model_matrix)
@@ -45,19 +40,19 @@ class HitBoxOBB(Hit):
         origin = glm.vec3(origin)
         direction = glm.normalize(glm.vec3(direction))
 
-        # Transformar el rayo a espacio local del objeto
+    
         inv_model = glm.inverse(self.model_matrix)
-        local_origin4 = inv_model * glm.vec4(origin, 1.0)   # punto: w = 1
-        local_dir4    = inv_model * glm.vec4(direction, 0.0)  # vector: w = 0
+        local_origin4 = inv_model * glm.vec4(origin, 1.0) 
+        local_dir4    = inv_model * glm.vec4(direction, 0.0)  
 
         local_origin = glm.vec3(local_origin4)
         local_dir    = glm.normalize(glm.vec3(local_dir4))
 
-        # AABB unidad en espacio local: [-1,1]^3
+
         min_bounds = glm.vec3(-1.0, -1.0, -1.0)
         max_bounds = glm.vec3( 1.0,  1.0,  1.0)
 
-        # Slab test por eje con manejo de paralelismo
+        
         tmin = -math.inf
         tmax =  math.inf
         eps = 1e-8
@@ -98,13 +93,9 @@ class HitBoxOBB(Hit):
             tmax = min(tmax, tz2)
             if tmin > tmax: return False
 
-        # Aceptamos hits delante de la cámara
+
         return tmax >= 0.0
 
-
-# ---------------------------------------------------------
-# (Opcional) AABB en MUNDO: igual al tuyo anterior
-# ---------------------------------------------------------
 class HitBox(Hit):
 
     def __init__(self, get_model_matrix):
@@ -117,7 +108,7 @@ class HitBox(Hit):
         min_bounds = self.position - self.scale
         max_bounds = self.position + self.scale
 
-        # Slab test simple (sin manejo explícito de paralelos)
+
         tmin = (min_bounds - origin) / direction
         tmax = (max_bounds - origin) / direction
 

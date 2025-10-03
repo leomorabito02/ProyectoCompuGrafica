@@ -25,7 +25,7 @@ class Camera:
 
         # NDC (Normalised Device Coordinates) en [-1,1]
         ndc_x = (2 * u - 1) * self.aspect * fov_adjustment
-        ndc_y = (2 * u - 1) * fov_adjustment
+        ndc_y = (2 * v - 1) * fov_adjustment
 
         # Dirección en espacio cámara
         ray_dir_camera = glm.vec3(ndc_x, ndc_y, -1.0)
