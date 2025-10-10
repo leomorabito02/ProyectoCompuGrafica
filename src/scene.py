@@ -29,29 +29,19 @@ class Scene:
         self.graphics[model.name] = Graphics(self.ctx, model, material)
 
     def render(self):
-        self.time += 0.01  # avanzar el tiempo
-
-        # Actualizar matrices de cámara y usarlas directo (como en la imagen)
-        self.view = self.camera.get_view_matrix()
-        self.projection = self.camera.get_perspective_matrix()
-
+        self.time += 0.01 
         for obj in self.objects:
-            # No animar el Quad de fondo (sprite)
-            if obj.name != "Sprite":
+            if (obj.animated):
                 # Rotaciones por frame (X, Y, Z)
                 obj.rotation += glm.vec3(0.8, 0.6, 0.4)
                 # Pequeño desplazamiento en X con el tiempo
                 obj.position.x = math.sin(self.time) * 0.01
 
-            # Calcular matrices y enviar uniformes
             model = obj.get_model_matrix()
             mvp = self.projection * self.view * model
-
-            # Ahora delegamos el render al Graphics del objeto
             self.graphics[obj.name].render({'Mvp': mvp})
 
     def on_mouse_click(self, u, v):
-        """u, v en [0,1] desde Window.on_mouse_press"""
         ray = self.camera.raycast(u, v)
 
         hit_any = False
@@ -60,7 +50,6 @@ class Scene:
                 if obj.check_hit(ray.origin, ray.direction):
                     print(f"¡Golpeaste al objeto {obj.name}!")
                     hit_any = True
-                    # break  # descomentá si querés cortar en el primer hit
 
         if not hit_any:
             print("No golpeaste ningún objeto.")

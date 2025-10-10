@@ -2,21 +2,21 @@ import glm
 import math
 
 class Hit:
-    def __init__(self, get_model_matrix, hittable: bool = True):
-        self.__get_model_matrix = get_model_matrix
-        self.hittable = hittable  # nuevo flag
+    def __init__(self, get_model_matrix, hittable = True):
+        self.__model_matrix = get_model_matrix
+        self.hittable = hittable
 
     @property
-    def model_matrix(self) -> glm.mat4:
-        return self.__get_model_matrix()
+    def model_matrix(self):
+        return self.__model_matrix()
 
     @property
-    def position(self) -> glm.vec3:
+    def position(self):
         m = self.model_matrix
         return glm.vec3(m[3].x, m[3].y, m[3].z)
 
     @property
-    def scale(self) -> glm.vec3:
+    def scale(self):
         m = self.model_matrix
         return glm.vec3(
             glm.length(glm.vec3(m[0])),
@@ -29,78 +29,54 @@ class Hit:
 
 
 class HitBoxOBB(Hit):
-    def __init__(self, get_model_matrix, hittable: bool = True):
+    def __init__(self, get_model_matrix, hittable = True):
         super().__init__(get_model_matrix, hittable)
 
-    def check_hit(self, origin, direction) -> bool:
-        # Si no es hiteable, cortar
-        if not self.hittable:
+    def check_hit(self,origin,direction):
+        if (not self.hittable):
             return False
-
-        # Normalizar datos de entrada
+        
         origin = glm.vec3(origin)
         direction = glm.normalize(glm.vec3(direction))
 
-        # Transformar a espacio local del OBB
+        #con la inversa, transformamos el rayo en sus componentes locales
         inv_model = glm.inverse(self.model_matrix)
-        local_origin4 = inv_model * glm.vec4(origin, 1.0)
-        local_dir4    = inv_model * glm.vec4(direction, 0.0)
+        #multiplicamos el origen del rayo por la inversa usando coordenadas homogéneas w = 1.0 (porque es un punto)
+        local_origin = inv_model * glm.vec4(origin, 1.0)
+        #multiplicamos la dirección por la misma inversa con w = 0.0,  no debe verse afectada por la traslación
+        local_dir = inv_model * glm.vec4(direction, 0.0)
 
-        local_origin = glm.vec3(local_origin4)
-        local_dir    = glm.normalize(glm.vec3(local_dir4))
+        # convertimos el resultado a vec3 (local_origin, local_dir)
+        local_origin = glm.vec3(local_origin)
 
-        # AABB unitario en espacio local
-        min_bounds = glm.vec3(-1.0, -1.0, -1.0)
-        max_bounds = glm.vec3( 1.0,  1.0,  1.0)
+        #normalizamos local_dir para obtener una dirección unitaria en el espacio local.
+        local_dir = glm.normalize(glm.vec3(local_dir))
 
-        tmin = -math.inf
-        tmax =  math.inf
-        eps = 1e-8
+        # calculamos los limites de la cajausando las variables transformadas al espacio total
+        mix_bounds = glm.vec3(-1,-1,-1)
+        max_bounds = glm.vec3(1,1,1)
 
-        # X
-        if abs(local_dir.x) < eps:
-            if local_origin.x < min_bounds.x or local_origin.x > max_bounds.x:
-                return False
-        else:
-            tx1 = (min_bounds.x - local_origin.x) / local_dir.x
-            tx2 = (max_bounds.x - local_origin.x) / local_dir.x
-            if tx1 > tx2: tx1, tx2 = tx2, tx1
-            tmin = max(tmin, tx1)
-            tmax = min(tmax, tx2)
-            if tmin > tmax: return False
+        # para cada eje, se despeja el valor de t de la ecuación usando como origen los planos de min y max
+        # entrada del rayo en ese eje
+        tmin = (mix_bounds - local_origin) / local_dir
+        #salida del rayo en ese eje
+        tmax = (max_bounds - local_origin) / local_dir
 
-        # Y
-        if abs(local_dir.y) < eps:
-            if local_origin.y < min_bounds.y or local_origin.y > max_bounds.y:
-                return False
-        else:
-            ty1 = (min_bounds.y - local_origin.y) / local_dir.y
-            ty2 = (max_bounds.y - local_origin.y) / local_dir.y
-            if ty1 > ty2: ty1, ty2 = ty2, ty1
-            tmin = max(tmin, ty1)
-            tmax = min(tmax, ty2)
-            if tmin > tmax: return False
+        # como no sabemos los valores, reorganizamos los valores para que t1 siempre sea la entrada
+        t1 = glm.min(tmin,tmax)
+        t2 = glm.max(tmin,tmax)
 
-        # Z
-        if abs(local_dir.z) < eps:
-            if local_origin.z < min_bounds.z or local_origin.z > max_bounds.z:
-                return False
-        else:
-            tz1 = (min_bounds.z - local_origin.z) / local_dir.z
-            tz2 = (max_bounds.z - local_origin.z) / local_dir.z
-            if tz1 > tz2: tz1, tz2 = tz2, tz1
-            tmin = max(tmin, tz1)
-            tmax = min(tmax, tz2)
-            if tmin > tmax: return False
+        t_near = max(t1.x, t1.y, t1.z)
+        t_far = min(t2.x, t2.y, t2.z)
 
-        return tmax >= 0.0
+        return t_near <= t_far and t_far >= 0
 
 
 class HitBox(Hit):
-    def __init__(self, get_model_matrix, hittable: bool = True):
+    def __init__(self, get_model_matrix, hittable = True):
         super().__init__(get_model_matrix, hittable)
 
-    def check_hit(self, origin, direction) -> bool:
+    def check_hit(self, origin, direction):
         # Si no es hiteable, cortar
         if not self.hittable:
             return False

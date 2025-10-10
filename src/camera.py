@@ -18,13 +18,10 @@ class Camera:
         self.__sky_color_bottom = None
 
     def set_sky_colors(self, top, bottom):
-        """Configura los colores del gradiente de cielo.
-        top/bottom pueden ser tuplas (r,g,b) o glm.vec3."""
         self.__sky_color_top = glm.vec3(*top)
         self.__sky_color_bottom = glm.vec3(*bottom)
 
     def get_sky_gradient(self, height):
-        """Devuelve un color interpolado según la 'altura' [-1..1]."""
         # Normaliza altura a [0,1] y suaviza con una potencia
         point = pow(0.5 * (height + 1.0), 1.5)
         # Mezcla entre bottom (0) y top (1)

@@ -26,7 +26,7 @@ material_sprite = Material(shader_program_skybox, textures_data=[skybox_texture]
 # Objetos
 cube1 = Cube((-2, 0, 2), (0, 45, 0), (1, 1, 1), name="Cube1")
 cube2 = Cube((2, 0, 2), (0, 45, 0), (1, 0.5, 1), name="Cube2")
-quad  = Quad((0, 0, 0), (0, 0, 0), (6, 5, 1), name="Sprite", hittable=False)  # <- cambio
+quad  = Quad((0, 0, 0), (0, 0, 0), (6, 5, 1), name="Sprite", hittable=False)
 
 # Cámara
 camera = Camera((0, 0, 10), (0, 0, 0), (0, 1, 0), 45, WIDTH / HEIGHT, 0.1, 100.0)

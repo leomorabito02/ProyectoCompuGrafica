@@ -21,15 +21,15 @@ class Graphics:
                 buffers.append((vbo, attribute.format, attribute.name))
         return buffers
 
-    # --- Nuevo load_textures con diccionario ---
+
     def load_textures(self, textures_data):
-        textures = {}  # ahora usamos un dict
+        textures = {}
         for texture in textures_data:
             if texture.image_data:
                 texture_ctx = self.__ctx.texture(
                     texture.size,
                     texture.channels_amount,
-                    texture.get_bytes()   # antes era texture.image_data
+                    texture.get_bytes()
                 )
                 if texture.build_mipmaps:
                     texture_ctx.build_mipmaps()
@@ -38,7 +38,7 @@ class Graphics:
                 textures[texture.name] = (texture, texture_ctx)
         return textures
 
-    # --- Render usando el diccionario ---
+    
     def render(self, uniforms):
         for name, value in uniforms.items():
             if name in self.__material.shader_program.prog:
@@ -62,3 +62,11 @@ class Graphics:
 
         # Escribir en GPU
         texture_ctx.write(texture_obj.get_bytes())
+class ComputeGraphics(Graphics):
+    def __init__(self, ctx, model, material):
+        self.__ctx = ctx
+        self.__model = model
+        self.__material = material
+        self.__textures = material.textures_data
+        super().__init__(ctx, model, material)
+        

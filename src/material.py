@@ -1,3 +1,4 @@
+from texture import Texture
 class Material:
     def __init__(self, shader_program, textures_data = []):
         self.__shader_program = shader_program
@@ -13,3 +14,9 @@ class Material:
 
     def set_uniform(self, name, value):
         self.__shader_program.set_uniform(name, value)
+
+class StandardMaterial(Material):
+    def __init__(self, shader_program, albedo: Texture, refelctivity = 0.0):
+        self.reflectivity = refelctivity
+        self.colorRGB = albedo.image_data[0,0]
+        super().__init__(shader_program, textures_data=[albedo])
